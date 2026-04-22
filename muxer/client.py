@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from prompt_toolkit.application import Application
+from prompt_toolkit.data_structures import Point
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import HSplit, Layout, Window
@@ -57,6 +58,8 @@ class ClientState:
     lines: list[str] = field(default_factory=list)
     terminals: list[dict[str, Any]] = field(default_factory=list)
     active_index: int | None = None
+    cursor_x: int = 0
+    cursor_y: int = 0
     message: str = ""
 
 
@@ -72,21 +75,30 @@ class MuxClient:
         self.prefix_pending = False
         self.rename_buffer: str | None = None
         self.local_message = ""
+        self.body_control = FormattedTextControl(
+            self.render_body,
+            focusable=True,
+            show_cursor=True,
+            get_cursor_position=self.get_cursor_position,
+        )
+        self.body_window = Window(
+            content=self.body_control,
+            always_hide_cursor=False,
+        )
+        self.status_window = Window(
+            content=FormattedTextControl(self.render_status),
+            height=1,
+            style="bg:ansiblack fg:ansiwhite",
+        )
         self.app = Application(
             layout=Layout(
                 HSplit(
                     [
-                        Window(
-                            content=FormattedTextControl(self.render_body),
-                            always_hide_cursor=True,
-                        ),
-                        Window(
-                            content=FormattedTextControl(self.render_status),
-                            height=1,
-                            style="reverse",
-                        ),
+                        self.body_window,
+                        self.status_window,
                     ]
-                )
+                ),
+                focused_element=self.body_window,
             ),
             full_screen=True,
             key_bindings=self.bindings(),
@@ -137,22 +149,28 @@ class MuxClient:
         rows = self.state.lines or ["(empty terminal)"]
         return "\n".join(rows)
 
+    def get_cursor_position(self) -> Point:
+        line_count = max(len(self.state.lines), 1)
+        y = min(max(self.state.cursor_y, 0), line_count - 1)
+        line = self.state.lines[y] if self.state.lines else ""
+        x = min(max(self.state.cursor_x, 0), len(line))
+        return Point(x=x, y=y)
+
     def render_status(self) -> list[tuple[str, str]]:
-        parts: list[tuple[str, str]] = [("reverse", f" {self.session_name} ")]
+        parts: list[tuple[str, str]] = [("bg:ansiblack fg:ansiwhite", f" {self.session_name} ")]
         for tab in self.state.terminals:
             index = tab.get("index", tab.get("id", "?"))
             active = index == self.state.active_index
             label = f"[{index}:{tab['name']}]" if active else f" {index}:{tab['name']} "
-            style = "reverse bold" if active else "reverse"
+            style = (
+                "bg:ansicyan fg:ansiblack bold"
+                if active
+                else "bg:ansiblack fg:ansiwhite"
+            )
             parts.append((style, label))
-        hint = (
-            f"  {self.prefix_label} c new  p prev  n next  0-9 jump  a rename"
-            f"  d detach  k kill  s save  PgUp/PgDn scroll"
-        )
-        parts.append(("reverse", hint))
         message = self.local_message or self.state.message
         if message:
-            parts.append(("reverse", f" | {message}"))
+            parts.append(("bg:ansiblack fg:ansiwhite", f" | {message}"))
         return parts
 
     def set_local_message(self, message: str) -> None:
@@ -279,6 +297,8 @@ class MuxClient:
             self.state.lines = [str(line) for line in message.get("lines", [])]
             self.state.terminals = list(message.get("terminals", []))
             self.state.active_index = message.get("active_index")
+            self.state.cursor_x = int(message.get("cursor_x", 0))
+            self.state.cursor_y = int(message.get("cursor_y", 0))
             self.state.message = str(message.get("message") or "")
             self.app.invalidate()
 

@@ -500,6 +500,8 @@ class SessionDaemon:
             ],
             "active_index": self.active_index if active else None,
             "active_tab": active.tab_id if active else None,
+            "cursor_x": active.screen.cursor.x if active else 0,
+            "cursor_y": active.screen.cursor.y if active else 0,
             "lines": lines,
             "message": self.message,
         }
