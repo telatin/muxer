@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "muxer"
+version = "0.1.0"
+description = "A small tmux-like terminal multiplexer written in Python."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "OpenAI Codex" }
+]
+dependencies = [
+  "prompt_toolkit>=3.0.43",
+  "pyte>=0.8.2",
+  "PyYAML>=6.0.2",
+]
+
+[project.scripts]
+muxer = "muxer.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["muxer"]
+
