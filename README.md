@@ -73,3 +73,7 @@ For better `$PWD` and environment capture, `muxer` injects a small shell hook fo
 By default, `muxer` stores runtime sockets and save files under `~/.muxer`.
 If that location is not writable, it falls back to a per-user temporary directory.
 You can override the location explicitly with `MUXER_HOME=/path/to/state`.
+
+## :bot:
+
+Coded with Alphabet Gemini and OpenAI Codex
