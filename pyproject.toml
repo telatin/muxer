@@ -18,9 +18,19 @@ dependencies = [
   "PyYAML>=6.0.2",
 ]
 
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-asyncio",
+]
+
 [project.scripts]
 muxer = "muxer.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["muxer"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
